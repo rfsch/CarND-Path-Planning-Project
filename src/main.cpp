@@ -97,19 +97,19 @@ int NextWaypoint(double x, double y, double theta, vector<double> maps_x, vector
 // Transform from Cartesian x,y coordinates to Frenet s,d coordinates
 vector<double> getFrenet(double x, double y, double theta, vector<double> maps_x, vector<double> maps_y, vector<double> maps_dx, vector<double> maps_dy)
 {
-	int next_wp = NextWaypoint(x, y, theta, maps_x, maps_y, maps_dx, maps_dy);
+	int next_waypoint = NextWaypoint(x, y, theta, maps_x, maps_y, maps_dx, maps_dy);
 
-	int prev_wp;
-	prev_wp = next_wp - 1;
-	if (next_wp == 0)
+	int prev_waypoint;
+	prev_waypoint = next_waypoint - 1;
+	if (next_waypoint == 0)
 	{
-		prev_wp = maps_x.size() - 1;
+		prev_waypoint = maps_x.size() - 1;
 	}
 
-	double n_x = maps_x[next_wp] - maps_x[prev_wp];
-	double n_y = maps_y[next_wp] - maps_y[prev_wp];
-	double x_x = x - maps_x[prev_wp];
-	double x_y = y - maps_y[prev_wp];
+	double n_x = maps_x[next_waypoint] - maps_x[prev_waypoint];
+	double n_y = maps_y[next_waypoint] - maps_y[prev_waypoint];
+	double x_x = x - maps_x[prev_waypoint];
+	double x_y = y - maps_y[prev_waypoint];
 
 	// find the projection of x onto n
 	double proj_norm = (x_x*n_x + x_y * n_y) / (n_x*n_x + n_y * n_y);
@@ -120,8 +120,8 @@ vector<double> getFrenet(double x, double y, double theta, vector<double> maps_x
 
 	//see if d value is positive or negative by comparing it to a center point
 
-	double center_x = 1000 - maps_x[prev_wp];
-	double center_y = 2000 - maps_y[prev_wp];
+	double center_x = 1000 - maps_x[prev_waypoint];
+	double center_y = 2000 - maps_y[prev_waypoint];
 	double centerToPos = distance(center_x, center_y, x_x, x_y);
 	double centerToRef = distance(center_x, center_y, proj_x, proj_y);
 
@@ -132,7 +132,7 @@ vector<double> getFrenet(double x, double y, double theta, vector<double> maps_x
 
 	// calculate s value
 	double frenet_s = 0;
-	for (int i = 0; i < prev_wp; i++)
+	for (int i = 0; i < prev_waypoint; i++)
 	{
 		frenet_s += distance(maps_x[i], maps_y[i], maps_x[i + 1], maps_y[i + 1]);
 	}
@@ -146,20 +146,20 @@ vector<double> getFrenet(double x, double y, double theta, vector<double> maps_x
 // Transform from Frenet s,d coordinates to Cartesian x,y
 vector<double> getXY(double s, double d, vector<double> maps_s, vector<double> maps_x, vector<double> maps_y)
 {
-	int prev_wp = -1;
+	int prev_waypoint = -1;
 
-	while ((prev_wp < (int)(maps_s.size() - 1)) && s > maps_s[prev_wp + 1])
+	while ((prev_waypoint < (int)(maps_s.size() - 1)) && s > maps_s[prev_waypoint + 1])
 	{
-		prev_wp++;
+		prev_waypoint++;
 	}
-	int wp2 = (prev_wp + 1) % maps_x.size();
+	int wp2 = (prev_waypoint + 1) % maps_x.size();
 
-	double heading = atan2((maps_y[wp2] - maps_y[prev_wp]), (maps_x[wp2] - maps_x[prev_wp]));
+	double heading = atan2((maps_y[wp2] - maps_y[prev_waypoint]), (maps_x[wp2] - maps_x[prev_waypoint]));
 	// the x,y,s along the segment
-	double seg_s = (s - maps_s[prev_wp]);
+	double seg_s = (s - maps_s[prev_waypoint]);
 
-	double seg_x = maps_x[prev_wp] + seg_s * cos(heading);
-	double seg_y = maps_y[prev_wp] + seg_s * sin(heading);
+	double seg_x = maps_x[prev_waypoint] + seg_s * cos(heading);
+	double seg_y = maps_y[prev_waypoint] + seg_s * sin(heading);
 
 	double perp_heading = heading - pi() / 2;
 
@@ -254,14 +254,14 @@ int main() {
 
 					int prev_size = previous_path_x.size();
 
-					int next_wp = -1;
+					int next_waypoint = -1;
 					double ref_x = car_x;
 					double ref_y = car_y;
 					double ref_yaw = deg2rad(car_yaw);
 
 					if (prev_size < 2)
 					{
-						next_wp = NextWaypoint(ref_x, ref_y, ref_yaw, map_waypoints_x, map_waypoints_y, map_waypoints_dx, map_waypoints_dy);
+						next_waypoint = NextWaypoint(ref_x, ref_y, ref_yaw, map_waypoints_x, map_waypoints_y, map_waypoints_dx, map_waypoints_dy);
 					}
 					else
 					{
@@ -270,7 +270,7 @@ int main() {
 						ref_y = previous_path_y[prev_size - 1];
 						double ref_y_prev = previous_path_y[prev_size - 2];
 						ref_yaw = atan2(ref_y - ref_y_prev, ref_x - ref_x_prev);
-						next_wp = NextWaypoint(ref_x, ref_y, ref_yaw, map_waypoints_x, map_waypoints_y, map_waypoints_dx, map_waypoints_dy);
+						next_waypoint = NextWaypoint(ref_x, ref_y, ref_yaw, map_waypoints_x, map_waypoints_y, map_waypoints_dx, map_waypoints_dy);
 
 						car_s = end_path_s;
 
@@ -278,8 +278,8 @@ int main() {
 					}
 
 					//find ref_v to use
-					double closestDist_s = 100000;
-					bool change_lanes = false;
+					double min_dist_s = 100000;
+					bool change_lane = false;
 					for (int i = 0; i < sensor_fusion.size(); i++)
 					{
 						//car is in my lane
@@ -292,23 +292,23 @@ int main() {
 							double check_car_s = sensor_fusion[i][5];
 							check_car_s += ((double)prev_size*.02*check_speed);
 							//check s values greater than mine and s gap
-							if ((check_car_s > car_s) && ((check_car_s - car_s) < 30) && ((check_car_s - car_s) < closestDist_s))
+							if ((check_car_s > car_s) && ((check_car_s - car_s) < 30) && ((check_car_s - car_s) < min_dist_s))
 							{
 
-								closestDist_s = (check_car_s - car_s);
+								min_dist_s = (check_car_s - car_s);
 
 								if ((check_car_s - car_s) > 22)
 								{
 
 									//match that cars speed
 									reference_velocity = check_speed * 2.237;
-									change_lanes = true;
+									change_lane = true;
 								}
 								else
 								{
 									//go slightly slower than the cars speed
 									reference_velocity = check_speed * 2.237 - 5;
-									change_lanes = true;
+									change_lane = true;
 
 								}
 							}
@@ -318,11 +318,11 @@ int main() {
 					}
 
 					//try to change lanes if too close to car in front
-					if (change_lanes && ((next_wp - lane_change_wp) % map_waypoints_x.size() > 2))
+					if (change_lane && ((next_waypoint - lane_change_wp) % map_waypoints_x.size() > 2))
 					{
-						bool changed_lanes = false;
+						bool has_changed_lanes = false;
 						//first try to change to left lane
-						if (lane != 0 && !changed_lanes)
+						if (lane != 0 && !has_changed_lanes)
 						{
 							bool lane_safe = true;
 							for (int i = 0; i < sensor_fusion.size(); i++)
@@ -346,13 +346,13 @@ int main() {
 							}
 							if (lane_safe)
 							{
-								changed_lanes = true;
+								has_changed_lanes = true;
 								lane -= 1;
-								lane_change_wp = next_wp;
+								lane_change_wp = next_waypoint;
 							}
 						}
 						//next try to change to right lane
-						if (lane != 2 && !changed_lanes)
+						if (lane != 2 && !has_changed_lanes)
 						{
 							bool lane_safe = true;
 							for (int i = 0; i < sensor_fusion.size(); i++)
@@ -376,9 +376,9 @@ int main() {
 							}
 							if (lane_safe)
 							{
-								changed_lanes = true;
+								has_changed_lanes = true;
 								lane += 1;
-								lane_change_wp = next_wp;
+								lane_change_wp = next_waypoint;
 							}
 
 						}
@@ -427,7 +427,7 @@ int main() {
 					for (int i = 0; i < ptsx.size(); i++)
 					{
 
-						//shift car reference angle to 0 degrees
+						//shift the car reference angle to zero degrees
 						double shift_x = ptsx[i] - ref_x;
 						double shift_y = ptsy[i] - ref_y;
 
@@ -437,10 +437,10 @@ int main() {
 					}
 
 
-					tk::spline s;
+					tk::spline s_spline;
 
 
-					s.set_points(ptsx, ptsy);
+					s_spline.set_points(ptsx, ptsy);
 
 					vector<double> next_x_vals;
 					vector<double> next_y_vals;
@@ -452,7 +452,7 @@ int main() {
 					}
 
 					double target_x = 30.0;
-					double target_y = s(target_x);
+					double target_y = s_spline(target_x);
 					double target_dist = sqrt((target_x)*(target_x)+(target_y)*(target_y));
 
 					double x_add_on = 0;
@@ -471,7 +471,7 @@ int main() {
 
 						double N = (target_dist / (.02*car_speed / 2.24));
 						double x_point = x_add_on + (target_x) / N;
-						double y_point = s(x_point);
+						double y_point = s_spline(x_point);
 
 						x_add_on = x_point;
 
@@ -556,7 +556,11 @@ int main() {
 #endif
 
 	int port = 4567;
+#ifdef UWS_VCPKG
 	if (h.listen("127.0.0.1", port)) {
+#else
+	if (h.listen(port)) {
+#endif
 		std::cout << "Listening to port " << port << std::endl;
 	}
 	else {
